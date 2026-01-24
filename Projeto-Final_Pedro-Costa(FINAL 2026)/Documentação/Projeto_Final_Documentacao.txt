@@ -1,0 +1,231 @@
+Documentação do Projeto Final — Instalação, Credenciais e Requisitos
+
+  Resumo: Este documento explica como instalar, configurar e executar a
+  aplicação (PHP + MySQL), incluindo requisitos, passos de instalação,
+  variáveis de ambiente, credenciais seed e resolução de problemas.
+
+------------------------------------------------------------------------
+
+1) Requisitos
+
+-   PHP: 8.1 ou superior (recomendado 8.2)
+-   Extensões: pdo_mysql, mysqli, mbstring, json, openssl, curl
+-   Servidor Web: Apache 2.4+ (com mod_rewrite) ou Nginx 1.18+
+-   Base de Dados: MySQL 8.0+ (ou MariaDB 10.6+)
+-   Composer: Opcional (apenas se fores usar .env com vlucas/phpdotenv)
+-   Node/npm: Não obrigatório (apenas se recompilares assets)
+
+  Ambientes Sugeridos
+
+  -   Windows: XAMPP/WAMP (PHP 8.2, MySQL 8.0)
+  -   Linux/Mac: Apache + PHP-FPM + MySQL instalados via gestor de
+      pacotes
+
+------------------------------------------------------------------------
+
+2) Estrutura do Projeto (simplificada)
+
+    / (raiz do projeto)
+    ├─ index.php
+    ├─ events.php
+    ├─ event.php
+    ├─ view_cart.php
+    ├─ add_to_cart.php
+    ├─ remove_from_cart.php
+    ├─ purchase.php / purchase_success.php / checkout_process.php
+    ├─ login_register.php / user.php
+    ├─ admin.php, create_event.php, edit_event.php, delete_event.php, admin_actions.php
+    ├─ db.php                 # ligação à BD
+    ├─ /images               # assets (imagens)
+    ├─ /css, /js             # (opcional)
+    ├─ .env                  # variáveis (opcional)
+    └─ database_export.sql   # export com schema + seed
+
+------------------------------------------------------------------------
+
+3) Instalação Rápida (TL;DR)
+
+1.  Clonar/copiar o projeto para a pasta do servidor web
+2.  Criar BD e importar database_export.sql
+3.  Configurar ligação no db.php (ou .env + db.php)
+4.  Abrir no browser http://localhost/ (ou o domínio configurado)
+5.  Entrar com a conta admin seed
+
+------------------------------------------------------------------------
+
+4) Passos Detalhados
+
+4.1) Download/Clone
+
+-   Descompacta o Projeto-Final.zip na pasta do servidor web
+    -   XAMPP (Windows): C:\xampp\htdocs\Projeto-Final_Pedro-Costa
+    -   Linux: /var/www/Projeto-Final_Pedro-Costa
+
+4.2) Base de Dados
+
+1.  Acede ao phpMyAdmin ou MySQL CLI.
+2.  Importa o ficheiro database_export.sql (está na raiz do projeto):
+    -   phpMyAdmin → Importar → selecionar o ficheiro → Executar
+
+    -   ou via terminal:
+
+            SOURCE /caminho/para/database_export.sql;
+3.  O script cria a BD projeto_final e as tabelas users, events,
+    purchases e cart, com dados seed (inclui admin).
+
+4.3) Configuração da Aplicação
+
+Opção A) Configuração direta no db.php (mais simples)
+
+Edite dbconnection.php com as suas credenciais:
+
+    <?php
+    $DB_HOST = '127.0.0.1';
+    $DB_NAME = 'eventhive';
+    $DB_USER = 'root';
+    $DB_PASS = '';
+    $DB_CHARSET = 'utf8mb4';
+
+    $dsn = "mysql:host={$DB_HOST};dbname={$DB_NAME};charset={$DB_CHARSET}";
+    $options = [
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES   => false,
+    ];
+
+    $pdo = new PDO($dsn, $DB_USER, $DB_PASS, $options);
+
+Opção B) Usar .env (boa prática)
+
+1.  Cria um ficheiro .env na raiz com:
+
+    APP_ENV=local
+    APP_URL=http://localhost/Projeto-Final
+    DB_HOST=127.0.0.1
+    DB_NAME=eventhive
+    DB_USER=root
+    DB_PASS=
+    DB_CHARSET=utf8mb4
+
+2.  (Opcional) Instala vlucas/phpdotenv se o projeto ainda não tiver
+    autoload via Composer:
+
+    composer require vlucas/phpdotenv
+
+3.  Adapta o dbconnection.php para carregar o .env:
+
+    <?php
+    // Carregar .env (se Composer estiver presente)
+    if (file_exists(__DIR__.'/.env') && file_exists(__DIR__.'/vendor/autoload.php')) {
+        require __DIR__.'/vendor/autoload.php';
+        Dotenv\Dotenv::createImmutable(__DIR__)->load();
+    }
+
+    $DB_HOST = $_ENV['DB_HOST'] ?? '127.0.0.1';
+    $DB_NAME = $_ENV['DB_NAME'] ?? 'eventhive';
+    $DB_USER = $_ENV['DB_USER'] ?? 'root';
+    $DB_PASS = $_ENV['DB_PASS'] ?? '';
+    $DB_CHARSET = $_ENV['DB_CHARSET'] ?? 'utf8mb4';
+
+    $dsn = "mysql:host={$DB_HOST};dbname={$DB_NAME};charset={$DB_CHARSET}";
+    $options = [
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES   => false,
+    ];
+    $pdo = new PDO($dsn, $DB_USER, $DB_PASS, $options);
+
+  Se não fores usar Composer, mantém a Opção A.
+
+4.4) Configuração do Servidor Web
+
+Apache
+
+-   Ativa mod_rewrite (se tiveres routes amigáveis; opcional neste
+    projeto)
+-   Garante permissões de leitura para a pasta do projeto e escrita para
+    as pastas que guardam uploads (se aplicável)
+
+Nginx (exemplo simples)
+
+    server {
+        listen 80;
+        server_name localhost;
+        root /var/www/Projeto-Final;
+        index index.php index.html;
+
+        location / {
+            try_files $uri /index.php?$query_string;
+        }
+
+        location ~ \.php$ {
+            include snippets/fastcgi-php.conf;
+            fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+        }
+    }
+
+------------------------------------------------------------------------
+
+5) Credenciais Seed (Acesso Inicial)
+
+-   ADMIN (seed)
+    -   Username: ADMIN1
+    -   Email: admin@exemplo.com
+    -   Password: Admin1234!,,.
+-   Alterar a password após o primeiro login (menu Perfil), por motivos
+    de segurança.
+
+-   USER (seed)
+    -   Username: USER1
+    -   Email: user1@exemplo.com
+    -   Password: User1!,,23.
+-   Alterar a password após o primeiro login (menu Perfil), por motivos
+    de segurança.
+
+------------------------------------------------------------------------
+
+6) Verificação Pós-Instalação (Checklist)
+
+-   ☐ Homepage abre sem erros (index.php)
+-   ☐ Listagem de eventos em events.php + filtros por data
+-   ☐ Página de detalhes event.php?id= acessível a partir da lista
+-   ☐ Carrinho: adicionar, visualizar e remover itens (view_cart.php +
+    remove_from_cart.php)
+-   ☐ Checkout: simulação de compra e redireciono purchase_success.php
+-   ☐ Admin: CRUD de eventos, gestão de utilizadores/compras
+-   ☐ BD: tabelas criadas, conta admin seed existente
+
+------------------------------------------------------------------------
+
+7) Segurança e Boas Práticas
+
+-   Trocar credenciais seed imediatamente
+-   Manter display_errors desligado em produção
+-   Validar e escapar todas as entradas (htmlspecialchars, prepared
+    statements)
+-   Proteger rotas administrativas com middleware de sessão/role
+-   Se usares .env, nunca o commitar para o repositório público
+
+------------------------------------------------------------------------
+
+8) Solução de Problemas (FAQ)
+
+Erro: SQLSTATE[HY000] [1049] Unknown database 'projeto_final' - A BD não
+foi criada/importada. Reimporta database_export.sql.
+
+Erro: Access denied for user 'root'@'localhost' - Credenciais erradas no
+dbconnection.php/.env. Corrige DB_USER / DB_PASS.
+
+Página em branco / 500 - Verifica o log do PHP/Apache - Ativa
+error_reporting(E_ALL); ini_set('display_errors', 1); apenas em
+desenvolvimento
+
+Imagens não aparecem - Confirma o caminho em image_url (ex.:
+images/rock.jpg) e permissões da pasta /images
+
+------------------------------------------------------------------------
+
+9) Anexos / Referências
+
+-   database_export.sql (schema + seed)
+-   Este documento (README.md ou DOC-Instalacao.pdf)
