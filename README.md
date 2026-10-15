@@ -5,7 +5,7 @@ Users can browse events, buy tickets and manage their profile, while administrat
 
 ## 📸 Screenshots
 
-![Homepage](./screenshots/home.png)
+![Homepage](./home.png)
 ![Events with add to cart](./events.png)
 ![Shopping cart](./cart.png)
 ![Admin dashboard](./admin-dashboard.png)
